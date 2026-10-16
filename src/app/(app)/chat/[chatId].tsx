@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -46,6 +47,13 @@ export default function Chat() {
 
   const turns = data.turns;
   const current = turns.find((t) => t.id === selectedId) ?? turns[turns.length - 1];
+
+  // Tipp neben ein offenes Overlay (Bewertung, Eingabe) schließt es
+  function closeOverlays() {
+    Keyboard.dismiss();
+    setRatingOpen(false);
+    setComposing(null);
+  }
 
   function compose(mode: "style" | "review") {
     setRatingOpen(false);
@@ -165,6 +173,14 @@ export default function Chat() {
           )}
         </ScrollView>
 
+        {(ratingOpen || composing) && (
+          <Pressable
+            accessibilityLabel="Schließen"
+            className="absolute inset-0"
+            onPress={closeOverlays}
+          />
+        )}
+
         {composing ? (
           <View className="mx-auto w-full max-w-screen-sm flex-row items-end gap-2 px-5 pb-3">
             <IconButton
@@ -192,21 +208,21 @@ export default function Chat() {
         ) : (
           <View
             className={cn(
-              "mx-auto w-full max-w-screen-sm items-end gap-3 px-5 pb-3 pt-2",
+              "mx-auto w-full max-w-screen-sm items-end px-5 pb-3 pt-2",
               changeStyle.isPending && "opacity-40",
             )}
             pointerEvents={changeStyle.isPending ? "none" : "auto"}
           >
             {ratingOpen && (
-              <View className="flex-row gap-2 rounded-full bg-card p-2">
+              <View className="absolute bottom-full right-5 mb-1 flex-row gap-2">
                 {RATINGS.map((r) => (
                   <Pressable
                     key={r}
                     onPress={() => rate(r)}
                     accessibilityLabel={`${r} von 5`}
                     className={cn(
-                      "h-11 w-11 items-center justify-center rounded-full active:opacity-70",
-                      current.image.rating === r ? "bg-foreground" : "bg-muted",
+                      "h-12 w-12 items-center justify-center rounded-full shadow-lg active:opacity-70",
+                      current.image.rating === r ? "bg-foreground" : "bg-card",
                     )}
                   >
                     <Text
