@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, ArrowUp, Heart, MessageCircle, Sparkles, Star, X } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,22 +13,15 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Animated, { ZoomIn } from "react-native-reanimated";
+import { Easing, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { GeneratingOverlay } from "@/components/generating-overlay";
+import { PopBubble } from "@/components/pop-bubble";
 import { cn, Icon, IconButton, Image, PillButton, Text } from "@/components/ui";
 import { useChangeStyle, useChat, useReviewImage, useToggleFavorite } from "@/lib/queries";
 
 const RATINGS = [1, 2, 3, 4, 5];
-
-// Federnder Pop-in, leicht versetzt pro Bubble
-const pop = (index: number) =>
-  ZoomIn.delay(index * 20)
-    .springify()
-    .mass(0.6)
-    .damping(16)
-    .stiffness(320);
 
 const PLACEHOLDERS = {
   style: "z. B. Farbe in kariertes Orange-Rot ändern",
@@ -45,6 +38,15 @@ export default function Chat() {
   const [composing, setComposing] = useState<"style" | "review" | null>(null);
   const [ratingOpen, setRatingOpen] = useState(false);
   const [text, setText] = useState("");
+  // ein gemeinsamer Fortschritt für alle Bewertungs-Bubbles (UI-Thread)
+  const ratingProgress = useSharedValue(0);
+
+  useEffect(() => {
+    ratingProgress.value = withTiming(ratingOpen ? 1 : 0, {
+      duration: ratingOpen ? 320 : 140,
+      easing: Easing.linear,
+    });
+  }, [ratingOpen, ratingProgress]);
 
   if (!data) {
     return (
@@ -222,37 +224,39 @@ export default function Chat() {
             )}
             pointerEvents={changeStyle.isPending ? "none" : "auto"}
           >
-            {ratingOpen && (
-              <View className="absolute bottom-full right-5 mb-2 flex-row items-center gap-1.5">
-                {/* Bubbles poppen nacheinander von links nach rechts auf */}
-                <Animated.View entering={pop(0)}>
-                  <View className="h-11 justify-center rounded-full bg-butter px-4 shadow-lg">
-                    <Text className="font-bold text-ink">Vote</Text>
-                  </View>
-                </Animated.View>
-                {RATINGS.map((r) => (
-                  <Animated.View key={r} entering={pop(r)}>
-                    <Pressable
-                      onPress={() => rate(r)}
-                      accessibilityLabel={`${r} von 5`}
+            <View
+              className="absolute bottom-full right-5 mb-2 flex-row items-center gap-1.5"
+              pointerEvents={ratingOpen ? "box-none" : "none"}
+              accessibilityElementsHidden={!ratingOpen}
+            >
+              {/* Bubbles poppen nacheinander von links nach rechts auf */}
+              <PopBubble index={0} open={ratingProgress}>
+                <View className="h-11 justify-center rounded-full bg-butter px-4 shadow-lg">
+                  <Text className="font-bold text-ink">Vote</Text>
+                </View>
+              </PopBubble>
+              {RATINGS.map((r) => (
+                <PopBubble key={r} index={r} open={ratingProgress}>
+                  <Pressable
+                    onPress={() => rate(r)}
+                    accessibilityLabel={`${r} von 5`}
+                    className={cn(
+                      "h-11 w-11 items-center justify-center rounded-full shadow-lg active:scale-90",
+                      current.image.rating === r ? "bg-foreground" : "bg-card",
+                    )}
+                  >
+                    <Text
                       className={cn(
-                        "h-11 w-11 items-center justify-center rounded-full shadow-lg active:scale-90",
-                        current.image.rating === r ? "bg-foreground" : "bg-card",
+                        "font-bold text-lg",
+                        current.image.rating === r && "text-background",
                       )}
                     >
-                      <Text
-                        className={cn(
-                          "font-bold text-lg",
-                          current.image.rating === r && "text-background",
-                        )}
-                      >
-                        {r}
-                      </Text>
-                    </Pressable>
-                  </Animated.View>
-                ))}
-              </View>
-            )}
+                      {r}
+                    </Text>
+                  </Pressable>
+                </PopBubble>
+              ))}
+            </View>
 
             <View className="flex-row items-center gap-2">
               <Pressable
