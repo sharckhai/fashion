@@ -18,7 +18,10 @@ import { useAuth } from "@/lib/auth-store";
 
 SplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+// Signed URLs sind 60 min gültig; 45 min staleTime verhindert unnötige Neuabfragen
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 45 * 60 * 1000, gcTime: 60 * 60 * 1000 } },
+});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({

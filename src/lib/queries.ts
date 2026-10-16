@@ -5,7 +5,14 @@ import { useAuth } from "@/lib/auth-store";
 import { supabase } from "@/lib/supabase";
 import { uploadImage } from "@/lib/upload";
 
-export type GalleryImage = { id: string; chatId: string; url: string; isFavorite: boolean };
+export type GalleryImage = {
+  id: string;
+  chatId: string;
+  url: string;
+  isFavorite: boolean;
+  rating: number | null;
+  review: string | null;
+};
 export type Turn = {
   id: string;
   feedback: string | null;
@@ -18,11 +25,26 @@ export type Turn = {
   };
 };
 
+// Signed URLs pro Pfad wiederverwenden, solange sie noch >10 min gültig sind.
+// Stabile URLs = Bild-Cache greift (Browser + expo-image), keine erneuten Downloads.
+const URL_TTL = 60 * 60 * 1000;
+const urlCache = new Map<string, { url: string; expires: number }>();
+
 async function signedUrls(bucket: string, paths: string[]) {
-  if (paths.length === 0) return [];
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(paths, 60 * 60);
-  if (error) throw error;
-  return data.map((d) => d.signedUrl!);
+  const key = (path: string) => `${bucket}/${path}`;
+  const minValid = Date.now() + 10 * 60 * 1000;
+  const missing = paths.filter((p) => (urlCache.get(key(p))?.expires ?? 0) < minValid);
+  if (missing.length > 0) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrls(missing, URL_TTL / 1000);
+    if (error) throw error;
+    const expires = Date.now() + URL_TTL;
+    for (const [i, d] of data.entries()) {
+      urlCache.set(key(missing[i]), { url: d.signedUrl!, expires });
+    }
+  }
+  return paths.map((p) => urlCache.get(key(p))!.url);
 }
 
 async function invokeTryOn(chatId: string, inputImageIds: string[], feedback?: string) {
@@ -40,7 +62,7 @@ export function useGallery() {
     queryFn: async (): Promise<GalleryImage[]> => {
       const { data } = await supabase
         .from("images")
-        .select("id, chat_id, storage_path, is_favorite")
+        .select("id, chat_id, storage_path, is_favorite, rating, review")
         .eq("kind", "generated")
         .order("created_at", { ascending: false })
         .throwOnError();
@@ -53,14 +75,29 @@ export function useGallery() {
         chatId: img.chat_id,
         url: urls[i],
         isFavorite: img.is_favorite,
+        rating: img.rating,
+        review: img.review,
       }));
     },
   });
 }
 
 export function useChat(chatId: string) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["chat", chatId],
+    // Sofort-Anzeige aus dem Galerie-Cache (gleiche URLs/cacheKeys -> Bild ist schon lokal),
+    // die echten Turns inkl. Change-Style-Texten kommen im Hintergrund nach
+    placeholderData: () => {
+      const images = queryClient
+        .getQueryData<GalleryImage[]>(["gallery"])
+        ?.filter((img) => img.chatId === chatId)
+        .reverse();
+      if (!images?.length) return undefined;
+      return {
+        turns: images.map(({ chatId: _, ...image }) => ({ id: image.id, feedback: null, image })),
+      };
+    },
     queryFn: async () => {
       const { data: generations } = await supabase
         .from("generations")

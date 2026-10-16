@@ -91,6 +91,7 @@ export default function Gallery() {
           >
             <Image
               source={{ uri: item.url, cacheKey: item.id }}
+              cachePolicy="memory-disk"
               className="aspect-[2/3] w-full rounded-3xl bg-muted"
               contentFit="cover"
               transition={200}

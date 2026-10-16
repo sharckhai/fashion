@@ -130,6 +130,7 @@ export default function Chat() {
           <View className="aspect-[2/3] w-full overflow-hidden rounded-[32px] bg-muted">
             <Image
               source={{ uri: current.image.url, cacheKey: current.image.id }}
+              cachePolicy="memory-disk"
               className="h-full w-full"
               contentFit="cover"
               transition={250}
@@ -176,6 +177,7 @@ export default function Chat() {
                 >
                   <Image
                     source={{ uri: item.image.url, cacheKey: item.image.id }}
+                    cachePolicy="memory-disk"
                     className="h-20 w-14 rounded-xl bg-muted"
                     contentFit="cover"
                   />

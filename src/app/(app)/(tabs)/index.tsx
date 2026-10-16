@@ -88,6 +88,7 @@ export default function Home() {
                 >
                   <Image
                     source={{ uri: item.url, cacheKey: item.id }}
+                    cachePolicy="memory-disk"
                     className="h-48 w-36 rounded-3xl bg-muted"
                     contentFit="cover"
                     transition={200}
