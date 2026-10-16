@@ -42,6 +42,9 @@ export default {
     form.append("prompt", feedback ? feedbackPrompt(feedback) : TRYON_PROMPT);
     form.append("size", "1024x1536");
     form.append("quality", "medium");
+    // JPEG statt PNG: ~5-10x kleiner, lädt in der App deutlich schneller
+    form.append("output_format", "jpeg");
+    form.append("output_compression", "85");
     for (const img of ordered) {
       const bucket = img.kind === "generated" ? "generations" : "uploads";
       const { data: file, error } = await supabase.storage.from(bucket).download(img.storage_path);
@@ -59,12 +62,12 @@ export default {
       throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
     }
     const { data } = await res.json();
-    const png = Uint8Array.from(atob(data[0].b64_json), (c) => c.charCodeAt(0));
+    const jpeg = Uint8Array.from(atob(data[0].b64_json), (c) => c.charCodeAt(0));
 
-    const path = `${userId}/${chatId}/${crypto.randomUUID()}.png`;
+    const path = `${userId}/${chatId}/${crypto.randomUUID()}.jpg`;
     const { error: uploadError } = await supabase.storage
       .from("generations")
-      .upload(path, png, { contentType: "image/png" });
+      .upload(path, jpeg, { contentType: "image/jpeg" });
     if (uploadError) throw uploadError;
 
     const { data: output } = await supabase

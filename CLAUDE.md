@@ -58,8 +58,8 @@ Expo-App (iOS zuerst, Android + Web nebenbei): Nutzer laden ein Foto von sich un
 ## Datenmodell
 
 - `chats`: eine Anprobier-Session
-- `images`: `kind` ist `person` | `garment` | `generated`, dazu `storage_path` und `is_favorite`
-- `generations`: ein Turn mit `input_image_ids[]`, `feedback`, `output_image_id` und `status`
+- `images`: `kind` ist `person` | `garment` | `generated`, dazu `storage_path` und `is_favorite`. Für generierte Bilder außerdem `rating` (1–5), `review` (Freitext-Feedback des Nutzers) und `reviewed_at`. Diese Werte werden nur gespeichert, um später daraus zu lernen, und gehen **nicht** an GPT.
+- `generations`: ein Turn mit `input_image_ids[]`, `feedback` (Change-Style-Anweisung an GPT), `output_image_id` und `status`
 - Turn 1 bekommt als Input Person und Kleidung. Ein Feedback-Turn bekommt **nur** das im Chat ausgewählte Ergebnisbild plus den Feedback-Text, ohne Original-Kleidung. So lässt sich jede Version einzeln weiterbearbeiten.
 
 ## Testen

@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, ArrowUp, Heart, MessageCircle, X } from "lucide-react-native";
+import { ArrowLeft, ArrowUp, Heart, MessageCircle, Sparkles, Star, X } from "lucide-react-native";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -15,17 +15,26 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { GeneratingOverlay } from "@/components/generating-overlay";
-import { cn, Icon, IconButton, Image, Text } from "@/components/ui";
-import { useChat, useSendFeedback, useToggleFavorite } from "@/lib/queries";
+import { cn, Icon, IconButton, Image, PillButton, Text } from "@/components/ui";
+import { useChangeStyle, useChat, useReviewImage, useToggleFavorite } from "@/lib/queries";
+
+const RATINGS = [1, 2, 3, 4, 5];
+
+const PLACEHOLDERS = {
+  style: "z. B. Farbe in kariertes Orange-Rot ändern",
+  review: "Was gefällt dir, was nicht?",
+};
 
 export default function Chat() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
   const { data } = useChat(chatId);
-  const sendFeedback = useSendFeedback(chatId);
+  const changeStyle = useChangeStyle(chatId);
+  const reviewImage = useReviewImage();
   const toggleFavorite = useToggleFavorite();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [composing, setComposing] = useState(false);
-  const [feedback, setFeedback] = useState("");
+  const [composing, setComposing] = useState<"style" | "review" | null>(null);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [text, setText] = useState("");
 
   if (!data) {
     return (
@@ -38,12 +47,29 @@ export default function Chat() {
   const turns = data.turns;
   const current = turns.find((t) => t.id === selectedId) ?? turns[turns.length - 1];
 
+  function compose(mode: "style" | "review") {
+    setRatingOpen(false);
+    setText(mode === "review" ? (current.image.review ?? "") : "");
+    setComposing(mode);
+  }
+
+  function rate(rating: number) {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    reviewImage.mutate({ imageId: current.image.id, rating });
+    setRatingOpen(false);
+  }
+
   function send() {
-    const text = feedback.trim();
-    setFeedback("");
-    setComposing(false);
-    sendFeedback.mutate(
-      { baseImageId: current.image.id, feedback: text },
+    const value = text.trim();
+    setText("");
+    setComposing(null);
+    if (composing === "review") {
+      reviewImage.mutate({ imageId: current.image.id, review: value });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return;
+    }
+    changeStyle.mutate(
+      { baseImageId: current.image.id, feedback: value },
       {
         onSuccess: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -80,7 +106,7 @@ export default function Chat() {
           />
         </View>
 
-        <ScrollView contentContainerClassName="mx-auto w-full max-w-screen-sm gap-4 px-5 pb-32">
+        <ScrollView contentContainerClassName="mx-auto w-full max-w-screen-sm gap-4 px-5 pb-6">
           <View className="aspect-[2/3] w-full overflow-hidden rounded-[32px] bg-muted">
             <Image
               source={{ uri: current.image.url, cacheKey: current.image.id }}
@@ -88,7 +114,7 @@ export default function Chat() {
               contentFit="cover"
               transition={250}
             />
-            {sendFeedback.isPending && <GeneratingOverlay className="absolute inset-0" />}
+            {changeStyle.isPending && <GeneratingOverlay className="absolute inset-0" />}
           </View>
 
           {current.feedback && (
@@ -96,8 +122,17 @@ export default function Chat() {
               <Text className="text-ink">„{current.feedback}“</Text>
             </View>
           )}
-          {sendFeedback.error && (
-            <Text className="text-destructive">{sendFeedback.error.message}</Text>
+          {current.image.review && (
+            <Pressable
+              onPress={() => compose("review")}
+              className="gap-1 rounded-3xl bg-card px-4 py-3 active:opacity-70"
+            >
+              <Text className="font-bold text-sm text-muted-foreground">Dein Feedback</Text>
+              <Text>{current.image.review}</Text>
+            </Pressable>
+          )}
+          {changeStyle.error && (
+            <Text className="text-destructive">{changeStyle.error.message}</Text>
           )}
 
           {turns.length > 1 && (
@@ -109,7 +144,10 @@ export default function Chat() {
               contentContainerClassName="gap-2"
               renderItem={({ item, index }) => (
                 <Pressable
-                  onPress={() => setSelectedId(item.id)}
+                  onPress={() => {
+                    setSelectedId(item.id);
+                    setRatingOpen(false);
+                  }}
                   accessibilityLabel={`Version ${index + 1}`}
                   className={cn(
                     "rounded-2xl border-2 p-0.5",
@@ -132,40 +170,91 @@ export default function Chat() {
             <IconButton
               icon={X}
               accessibilityLabel="Abbrechen"
-              onPress={() => setComposing(false)}
+              onPress={() => setComposing(null)}
             />
             <TextInput
               autoFocus
               multiline
-              value={feedback}
-              onChangeText={setFeedback}
-              placeholder="z. B. Farbe in kariertes Orange-Rot ändern"
+              value={text}
+              onChangeText={setText}
+              placeholder={PLACEHOLDERS[composing]}
               className="max-h-32 min-h-11 flex-1 rounded-3xl bg-card px-5 py-3 font-sans text-base text-foreground placeholder:text-muted-foreground"
             />
             <IconButton
               icon={ArrowUp}
               accessibilityLabel="Senden"
-              disabled={!feedback.trim()}
-              className={cn("bg-foreground", !feedback.trim() && "opacity-40")}
+              disabled={!text.trim()}
+              className={cn("bg-foreground", !text.trim() && "opacity-40")}
               iconClassName="text-background"
               onPress={send}
             />
           </View>
         ) : (
-          <Pressable
-            disabled={sendFeedback.isPending}
-            onPress={() => {
-              Haptics.selectionAsync();
-              setComposing(true);
-            }}
+          <View
             className={cn(
-              "absolute bottom-8 right-5 h-14 flex-row items-center gap-2 rounded-full bg-foreground px-6 active:opacity-80",
-              sendFeedback.isPending && "opacity-40",
+              "mx-auto w-full max-w-screen-sm items-end gap-3 px-5 pb-3 pt-2",
+              changeStyle.isPending && "opacity-40",
             )}
+            pointerEvents={changeStyle.isPending ? "none" : "auto"}
           >
-            <Icon as={MessageCircle} size={20} className="text-background" />
-            <Text className="font-bold text-background">Feedback</Text>
-          </Pressable>
+            {ratingOpen && (
+              <View className="flex-row gap-2 rounded-full bg-card p-2">
+                {RATINGS.map((r) => (
+                  <Pressable
+                    key={r}
+                    onPress={() => rate(r)}
+                    accessibilityLabel={`${r} von 5`}
+                    className={cn(
+                      "h-11 w-11 items-center justify-center rounded-full active:opacity-70",
+                      current.image.rating === r ? "bg-foreground" : "bg-muted",
+                    )}
+                  >
+                    <Text
+                      className={cn(
+                        "font-bold text-lg",
+                        current.image.rating === r && "text-background",
+                      )}
+                    >
+                      {r}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            <View className="flex-row items-center gap-2">
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setRatingOpen(!ratingOpen);
+                }}
+                accessibilityLabel="Bewerten"
+                className={cn(
+                  "h-14 min-w-14 flex-row items-center justify-center gap-1 rounded-full px-4 active:opacity-70",
+                  ratingOpen ? "bg-foreground" : "bg-card",
+                )}
+              >
+                <Icon
+                  as={Star}
+                  size={20}
+                  fill={current.image.rating ? "currentColor" : "none"}
+                  className={ratingOpen ? "text-background" : "text-foreground"}
+                />
+                {current.image.rating && (
+                  <Text className={cn("font-bold", ratingOpen && "text-background")}>
+                    {current.image.rating}
+                  </Text>
+                )}
+              </Pressable>
+              <IconButton
+                icon={MessageCircle}
+                accessibilityLabel="Feedback"
+                className="h-14 w-14"
+                onPress={() => compose("review")}
+              />
+              <PillButton label="Change Style" icon={Sparkles} onPress={() => compose("style")} />
+            </View>
+          </View>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>

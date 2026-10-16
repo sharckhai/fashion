@@ -9,7 +9,13 @@ export type GalleryImage = { id: string; chatId: string; url: string; isFavorite
 export type Turn = {
   id: string;
   feedback: string | null;
-  image: { id: string; url: string; isFavorite: boolean };
+  image: {
+    id: string;
+    url: string;
+    isFavorite: boolean;
+    rating: number | null;
+    review: string | null;
+  };
 };
 
 async function signedUrls(bucket: string, paths: string[]) {
@@ -58,7 +64,7 @@ export function useChat(chatId: string) {
     queryFn: async () => {
       const { data: generations } = await supabase
         .from("generations")
-        .select("id, feedback, output:images(id, storage_path, is_favorite)")
+        .select("id, feedback, output:images(id, storage_path, is_favorite, rating, review)")
         .eq("chat_id", chatId)
         .eq("status", "done")
         .order("created_at")
@@ -71,7 +77,13 @@ export function useChat(chatId: string) {
       const turns: Turn[] = generations.map((g, i) => ({
         id: g.id,
         feedback: g.feedback,
-        image: { id: outputs[i].id, url: urls[i], isFavorite: outputs[i].is_favorite },
+        image: {
+          id: outputs[i].id,
+          url: urls[i],
+          isFavorite: outputs[i].is_favorite,
+          rating: outputs[i].rating,
+          review: outputs[i].review,
+        },
       }));
       return { turns };
     },
@@ -112,7 +124,8 @@ export function useCreateTryOn() {
   });
 }
 
-export function useSendFeedback(chatId: string) {
+// Change Style: ausgewähltes Bild + Text an GPT, erzeugt eine neue Version
+export function useChangeStyle(chatId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ baseImageId, feedback }: { baseImageId: string; feedback: string }) => {
@@ -157,5 +170,39 @@ export function useToggleFavorite() {
         queryClient.invalidateQueries({ queryKey: ["gallery"] }),
         queryClient.invalidateQueries({ queryKey: ["chat"] }),
       ]),
+  });
+}
+
+// Bewertung (1–5) und Feedback des Nutzers pro Bild; wird nur gespeichert, nicht an GPT geschickt
+export function useReviewImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      imageId,
+      ...review
+    }: {
+      imageId: string;
+      rating?: number;
+      review?: string;
+    }) => {
+      await supabase
+        .from("images")
+        .update({ ...review, reviewed_at: new Date().toISOString() })
+        .eq("id", imageId)
+        .throwOnError();
+    },
+    onMutate: ({ imageId, ...review }) => {
+      queryClient.setQueriesData<{ turns: Turn[] }>(
+        { queryKey: ["chat"] },
+        (old) =>
+          old && {
+            ...old,
+            turns: old.turns.map((t) =>
+              t.image.id === imageId ? { ...t, image: { ...t.image, ...review } } : t,
+            ),
+          },
+      );
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["chat"] }),
   });
 }

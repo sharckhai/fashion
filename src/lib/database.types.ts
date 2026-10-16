@@ -81,6 +81,9 @@ export type Database = {
           id: string;
           is_favorite: boolean;
           kind: string;
+          rating: number | null;
+          review: string | null;
+          reviewed_at: string | null;
           storage_path: string;
           user_id: string;
         };
@@ -90,6 +93,9 @@ export type Database = {
           id?: string;
           is_favorite?: boolean;
           kind: string;
+          rating?: number | null;
+          review?: string | null;
+          reviewed_at?: string | null;
           storage_path: string;
           user_id?: string;
         };
@@ -99,6 +105,9 @@ export type Database = {
           id?: string;
           is_favorite?: boolean;
           kind?: string;
+          rating?: number | null;
+          review?: string | null;
+          reviewed_at?: string | null;
           storage_path?: string;
           user_id?: string;
         };
