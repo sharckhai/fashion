@@ -86,7 +86,8 @@ export default function Gallery() {
               icon={Heart}
               accessibilityLabel={item.isFavorite ? "Favorit entfernen" : "Als Favorit markieren"}
               className="absolute bottom-2 right-2"
-              iconClassName={item.isFavorite ? "fill-destructive text-destructive" : undefined}
+              filled={item.isFavorite}
+              iconClassName={item.isFavorite ? "text-destructive" : undefined}
               onPress={() =>
                 toggleFavorite.mutate({ imageId: item.id, isFavorite: !item.isFavorite })
               }

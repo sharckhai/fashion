@@ -63,9 +63,8 @@ export default function Chat() {
           <IconButton
             icon={Heart}
             accessibilityLabel="Favorit"
-            iconClassName={
-              current.image.isFavorite ? "fill-destructive text-destructive" : undefined
-            }
+            filled={current.image.isFavorite}
+            iconClassName={current.image.isFavorite ? "text-destructive" : undefined}
             onPress={() =>
               toggleFavorite.mutate({
                 imageId: current.image.id,

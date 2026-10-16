@@ -39,9 +39,10 @@ export function IconButton({
   icon,
   className,
   iconClassName,
+  filled,
   onPress,
   ...props
-}: ButtonProps & { icon: LucideIcon; iconClassName?: string }) {
+}: ButtonProps & { icon: LucideIcon; iconClassName?: string; filled?: boolean }) {
   return (
     <Pressable
       hitSlop={8}
@@ -52,7 +53,12 @@ export function IconButton({
       )}
       {...props}
     >
-      <Icon as={icon} size={20} className={cn("text-foreground", iconClassName)} />
+      <Icon
+        as={icon}
+        size={20}
+        fill={filled ? "currentColor" : "none"}
+        className={cn("text-foreground", iconClassName)}
+      />
     </Pressable>
   );
 }

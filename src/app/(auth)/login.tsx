@@ -54,8 +54,8 @@ export default function Login() {
           <View className="mx-auto w-full max-w-screen-sm gap-6">
             <View className="h-24 w-24 rotate-12 rounded-[32px] bg-butter" />
             <Text className="font-display text-5xl leading-[56px] tracking-tight">
-              Probier alles an,{"\n"}
-              <Text className="font-serif text-5xl leading-[56px]">bevor du's kaufst.</Text>
+              Erst anprobieren,{"\n"}
+              <Text className="font-serif text-5xl leading-[56px]">dann kaufen.</Text>
             </Text>
             <Text className="text-muted-foreground">
               Lade ein Foto von dir und deine Wunsch-Kleidung hoch – wir zeigen dir, wie es

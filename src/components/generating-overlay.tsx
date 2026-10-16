@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react-native";
 import { useEffect, useState } from "react";
+import { View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -30,12 +31,13 @@ export function GeneratingOverlay({ className }: { className?: string }) {
   const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
 
   return (
-    <Animated.View
-      className={cn("items-center justify-center gap-4 bg-lavender", className)}
-      style={style}
-    >
-      <Icon as={Sparkles} size={36} className="text-ink" />
-      <Text className="font-bold text-lg text-ink">{MESSAGES[index]}</Text>
-    </Animated.View>
+    <View className={cn("items-center justify-center bg-lavender", className)}>
+      <Animated.View style={style}>
+        <View className="items-center gap-4">
+          <Icon as={Sparkles} size={36} className="text-ink" />
+          <Text className="font-bold text-lg text-ink">{MESSAGES[index]}</Text>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
