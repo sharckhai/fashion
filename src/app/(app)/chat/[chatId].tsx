@@ -24,10 +24,11 @@ const RATINGS = [1, 2, 3, 4, 5];
 
 // Federnder Pop-in, leicht versetzt pro Bubble
 const pop = (index: number) =>
-  ZoomIn.delay(index * 45)
+  ZoomIn.delay(index * 20)
     .springify()
-    .damping(13)
-    .stiffness(220);
+    .mass(0.6)
+    .damping(16)
+    .stiffness(320);
 
 const PLACEHOLDERS = {
   style: "z. B. Farbe in kariertes Orange-Rot ändern",
