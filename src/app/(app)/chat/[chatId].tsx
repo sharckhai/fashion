@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Animated, { ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { GeneratingOverlay } from "@/components/generating-overlay";
@@ -20,6 +21,13 @@ import { cn, Icon, IconButton, Image, PillButton, Text } from "@/components/ui";
 import { useChangeStyle, useChat, useReviewImage, useToggleFavorite } from "@/lib/queries";
 
 const RATINGS = [1, 2, 3, 4, 5];
+
+// Federnder Pop-in, leicht versetzt pro Bubble
+const pop = (index: number) =>
+  ZoomIn.delay(index * 45)
+    .springify()
+    .damping(13)
+    .stiffness(220);
 
 const PLACEHOLDERS = {
   style: "z. B. Farbe in kariertes Orange-Rot ändern",
@@ -214,26 +222,33 @@ export default function Chat() {
             pointerEvents={changeStyle.isPending ? "none" : "auto"}
           >
             {ratingOpen && (
-              <View className="absolute bottom-full right-5 mb-1 flex-row gap-2">
+              <View className="absolute bottom-full right-5 mb-2 flex-row items-center gap-1.5">
+                {/* Bubbles poppen nacheinander von links nach rechts auf */}
+                <Animated.View entering={pop(0)}>
+                  <View className="h-11 justify-center rounded-full bg-butter px-4 shadow-lg">
+                    <Text className="font-bold text-ink">Vote</Text>
+                  </View>
+                </Animated.View>
                 {RATINGS.map((r) => (
-                  <Pressable
-                    key={r}
-                    onPress={() => rate(r)}
-                    accessibilityLabel={`${r} von 5`}
-                    className={cn(
-                      "h-12 w-12 items-center justify-center rounded-full shadow-lg active:opacity-70",
-                      current.image.rating === r ? "bg-foreground" : "bg-card",
-                    )}
-                  >
-                    <Text
+                  <Animated.View key={r} entering={pop(r)}>
+                    <Pressable
+                      onPress={() => rate(r)}
+                      accessibilityLabel={`${r} von 5`}
                       className={cn(
-                        "font-bold text-lg",
-                        current.image.rating === r && "text-background",
+                        "h-11 w-11 items-center justify-center rounded-full shadow-lg active:scale-90",
+                        current.image.rating === r ? "bg-foreground" : "bg-card",
                       )}
                     >
-                      {r}
-                    </Text>
-                  </Pressable>
+                      <Text
+                        className={cn(
+                          "font-bold text-lg",
+                          current.image.rating === r && "text-background",
+                        )}
+                      >
+                        {r}
+                      </Text>
+                    </Pressable>
+                  </Animated.View>
                 ))}
               </View>
             )}
