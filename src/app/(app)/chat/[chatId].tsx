@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, ArrowUp, Heart, MessageCircle, Sparkles, Star, X } from "lucide-react-native";
-import { useState } from "react";
+import { ArrowLeft, ArrowUp, Heart, MessageCircle, Sparkles, Star } from "lucide-react-native";
+import { type ComponentRef, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -22,9 +22,13 @@ import { useChangeStyle, useChat, useReviewImage, useToggleFavorite } from "@/li
 
 const RATINGS = [1, 2, 3, 4, 5];
 
-const PLACEHOLDERS = {
-  style: "z. B. Farbe in kariertes Orange-Rot ändern",
-  review: "Was gefällt dir, was nicht?",
+const COMPOSER = {
+  style: {
+    label: "Change Style",
+    color: "bg-butter",
+    placeholder: "z. B. Farbe in kariertes Orange-Rot ändern",
+  },
+  review: { label: "Feedback", color: "bg-lavender", placeholder: "Was gefällt dir, was nicht?" },
 };
 
 export default function Chat() {
@@ -35,9 +39,17 @@ export default function Chat() {
   const toggleFavorite = useToggleFavorite();
   // ausgewählte Version per Bild-ID; Start mit dem Bild, das auf Home/Galerie angetippt wurde
   const [selectedImageId, setSelectedImageId] = useState<string | null>(imageId ?? null);
-  const [composing, setComposing] = useState<"style" | "review" | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  // Modus bleibt beim Schließen erhalten, damit die Bubble mit dem richtigen Inhalt ausblendet
+  const [mode, setMode] = useState<"style" | "review">("style");
   const [ratingOpen, setRatingOpen] = useState(false);
   const [text, setText] = useState("");
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+
+  useEffect(() => {
+    if (composerOpen) inputRef.current?.focus();
+    else inputRef.current?.blur();
+  }, [composerOpen]);
 
   if (!data) {
     return (
@@ -54,14 +66,20 @@ export default function Chat() {
   function closeOverlays() {
     Keyboard.dismiss();
     setRatingOpen(false);
-    setComposing(null);
+    setComposerOpen(false);
   }
 
-  function compose(mode: "style" | "review") {
+  function compose(next: "style" | "review") {
+    if (composerOpen && mode === next) return closeOverlays();
     setRatingOpen(false);
-    setText(mode === "review" ? (current.image.review ?? "") : "");
-    setComposing(mode);
+    setText(next === "review" ? (current.image.review ?? "") : "");
+    setMode(next);
+    setComposerOpen(true);
   }
+
+  // aktives Overlay; die übrigen Buttons der Leiste werden abgedunkelt
+  const active = ratingOpen ? "rating" : composerOpen ? mode : null;
+  const dimmed = (key: "rating" | "style" | "review") => active !== null && active !== key;
 
   function rate(rating: number) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -72,8 +90,8 @@ export default function Chat() {
   function send() {
     const value = text.trim();
     setText("");
-    setComposing(null);
-    if (composing === "review") {
+    setComposerOpen(false);
+    if (mode === "review") {
       reviewImage.mutate({ imageId: current.image.id, review: value });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return;
@@ -177,7 +195,7 @@ export default function Chat() {
           )}
         </ScrollView>
 
-        {(ratingOpen || composing) && (
+        {active && (
           <Pressable
             accessibilityLabel="Schließen"
             className="absolute inset-0"
@@ -185,106 +203,130 @@ export default function Chat() {
           />
         )}
 
-        {composing ? (
-          <View className="mx-auto w-full max-w-screen-sm flex-row items-end gap-2 px-5 pb-3">
-            <IconButton
-              icon={X}
-              accessibilityLabel="Abbrechen"
-              onPress={() => setComposing(null)}
-            />
-            <TextInput
-              autoFocus
-              multiline
-              value={text}
-              onChangeText={setText}
-              placeholder={PLACEHOLDERS[composing]}
-              className="max-h-32 min-h-11 flex-1 rounded-3xl bg-card px-5 py-3 font-sans text-base text-foreground placeholder:text-muted-foreground"
-            />
-            <IconButton
-              icon={ArrowUp}
-              accessibilityLabel="Senden"
-              disabled={!text.trim()}
-              className={cn("bg-foreground", !text.trim() && "opacity-40")}
-              iconClassName="text-background"
-              onPress={send}
-            />
-          </View>
-        ) : (
+        <View
+          className={cn(
+            "mx-auto w-full max-w-screen-sm items-end px-5 pb-3 pt-2",
+            changeStyle.isPending && "opacity-40",
+          )}
+          pointerEvents={changeStyle.isPending ? "none" : "box-none"}
+        >
+          {/* Bewertung: Bubbles poppen nacheinander von links nach rechts auf */}
           <View
-            className={cn(
-              "mx-auto w-full max-w-screen-sm items-end px-5 pb-3 pt-2",
-              changeStyle.isPending && "opacity-40",
-            )}
-            pointerEvents={changeStyle.isPending ? "none" : "auto"}
+            className="absolute bottom-full right-5 mb-2 flex-row items-center gap-1.5"
+            pointerEvents={ratingOpen ? "box-none" : "none"}
+            accessibilityElementsHidden={!ratingOpen}
           >
-            <View
-              className="absolute bottom-full right-5 mb-2 flex-row items-center gap-1.5"
-              pointerEvents={ratingOpen ? "box-none" : "none"}
-              accessibilityElementsHidden={!ratingOpen}
-            >
-              {/* Bubbles poppen nacheinander von links nach rechts auf */}
-              <PopBubble index={0} open={ratingOpen}>
-                <View className="h-11 justify-center rounded-full bg-butter px-4">
-                  <Text className="font-bold text-ink">Vote</Text>
-                </View>
-              </PopBubble>
-              {RATINGS.map((r) => (
-                <PopBubble key={r} index={r} open={ratingOpen}>
-                  <Pressable
-                    onPress={() => rate(r)}
-                    accessibilityLabel={`${r} von 5`}
+            <PopBubble index={0} open={ratingOpen}>
+              <View className="h-11 justify-center rounded-full bg-butter px-4">
+                <Text className="font-bold text-ink">Vote</Text>
+              </View>
+            </PopBubble>
+            {RATINGS.map((r) => (
+              <PopBubble key={r} index={r} open={ratingOpen}>
+                <Pressable
+                  onPress={() => rate(r)}
+                  accessibilityLabel={`${r} von 5`}
+                  className={cn(
+                    "h-11 w-11 items-center justify-center rounded-full border border-foreground/10 active:scale-90",
+                    current.image.rating === r ? "bg-foreground" : "bg-card",
+                  )}
+                >
+                  <Text
                     className={cn(
-                      "h-11 w-11 items-center justify-center rounded-full border border-foreground/10 active:scale-90",
-                      current.image.rating === r ? "bg-foreground" : "bg-card",
+                      "font-bold text-lg",
+                      current.image.rating === r && "text-background",
                     )}
                   >
-                    <Text
-                      className={cn(
-                        "font-bold text-lg",
-                        current.image.rating === r && "text-background",
-                      )}
-                    >
-                      {r}
-                    </Text>
-                  </Pressable>
-                </PopBubble>
-              ))}
-            </View>
-
-            <View className="flex-row items-center gap-2">
-              <Pressable
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setRatingOpen(!ratingOpen);
-                }}
-                accessibilityLabel="Bewerten"
-                className={cn(
-                  "h-14 min-w-14 flex-row items-center justify-center gap-1 rounded-full px-4 active:opacity-70",
-                  ratingOpen ? "bg-foreground" : "bg-card",
-                )}
-              >
-                <Icon
-                  as={Star}
-                  size={20}
-                  fill={current.image.rating ? "currentColor" : "none"}
-                  className={ratingOpen ? "text-background" : "text-foreground"}
-                />
-                {current.image.rating && (
-                  <Text className={cn("font-bold", ratingOpen && "text-background")}>
-                    {current.image.rating}
+                    {r}
                   </Text>
-                )}
-              </Pressable>
-              <IconButton
-                icon={MessageCircle}
-                accessibilityLabel="Feedback"
-                className="h-14 w-14"
-                onPress={() => compose("review")}
-              />
-              <PillButton label="Change Style" icon={Sparkles} onPress={() => compose("style")} />
+                </Pressable>
+              </PopBubble>
+            ))}
+          </View>
+
+          {/* Feedback / Change Style: Label- und Text-Bubble poppen über der Leiste auf */}
+          <View
+            className="absolute inset-x-5 bottom-full mb-2 items-end gap-1.5"
+            pointerEvents={composerOpen ? "box-none" : "none"}
+            accessibilityElementsHidden={!composerOpen}
+          >
+            <PopBubble index={0} open={composerOpen}>
+              <View className={cn("h-9 justify-center rounded-full px-4", COMPOSER[mode].color)}>
+                <Text className="font-bold text-ink text-sm">{COMPOSER[mode].label}</Text>
+              </View>
+            </PopBubble>
+            <View className="w-full flex-row items-end gap-1.5">
+              <View className="flex-1">
+                <PopBubble index={1} open={composerOpen}>
+                  <TextInput
+                    ref={inputRef}
+                    multiline
+                    value={text}
+                    onChangeText={setText}
+                    placeholder={COMPOSER[mode].placeholder}
+                    className="max-h-32 min-h-11 rounded-3xl border border-foreground/10 bg-card px-5 py-3 outline-none font-sans text-base text-foreground placeholder:text-muted-foreground"
+                  />
+                </PopBubble>
+              </View>
+              <PopBubble index={2} open={composerOpen}>
+                <IconButton
+                  icon={ArrowUp}
+                  accessibilityLabel="Senden"
+                  disabled={!text.trim()}
+                  className={cn("bg-foreground", !text.trim() && "opacity-40")}
+                  iconClassName="text-background"
+                  onPress={send}
+                />
+              </PopBubble>
             </View>
           </View>
-        )}
+
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                if (ratingOpen) return closeOverlays();
+                closeOverlays();
+                setRatingOpen(true);
+              }}
+              accessibilityLabel="Bewerten"
+              className={cn(
+                "h-14 min-w-14 flex-row items-center justify-center gap-1 rounded-full px-4 active:opacity-70",
+                ratingOpen ? "bg-foreground" : "bg-card",
+                dimmed("rating") && "opacity-40",
+              )}
+            >
+              <Icon
+                as={Star}
+                size={20}
+                fill={current.image.rating ? "currentColor" : "none"}
+                className={ratingOpen ? "text-background" : "text-foreground"}
+              />
+              {current.image.rating && (
+                <Text className={cn("font-bold", ratingOpen && "text-background")}>
+                  {current.image.rating}
+                </Text>
+              )}
+            </Pressable>
+            <IconButton
+              icon={MessageCircle}
+              accessibilityLabel="Feedback"
+              className={cn(
+                "h-14 w-14",
+                active === "review" && "bg-foreground",
+                dimmed("review") && "opacity-40",
+              )}
+              iconClassName={active === "review" ? "text-background" : undefined}
+              onPress={() => compose("review")}
+            />
+            <PillButton
+              label="Change Style"
+              icon={Sparkles}
+              className={cn(dimmed("style") && "opacity-40")}
+              onPress={() => compose("style")}
+            />
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
