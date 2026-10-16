@@ -1,19 +1,21 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import Animated, {
-  Easing,
-  Extrapolation,
   interpolate,
-  type SharedValue,
   useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
 } from "react-native-reanimated";
 
-const STAGGER = 0.1;
-const SPAN = 0.5;
-const easeOutBack = Easing.out(Easing.back(1.4));
+const STAGGER_MS = 35;
+// weiche iOS-artige Feder mit leichtem Überschwingen
+const SPRING = { damping: 15, stiffness: 240, mass: 0.8 };
 
 /**
- * Bubble, die aus einem gemeinsamen Fortschritt `open` (0 → 1) ihren eigenen,
- * versetzten Pop-in ableitet. Läuft komplett auf dem UI-Thread, kein Re-Mount.
+ * Bubble mit federndem Pop-in, versetzt nach `index`. Bleibt gemountet,
+ * animiert komplett auf dem UI-Thread. Kein Schatten auf animierten Views
+ * (iOS rendert Schatten sonst in jedem Frame neu -> Ruckeln).
  */
 export function PopBubble({
   index,
@@ -21,16 +23,21 @@ export function PopBubble({
   children,
 }: {
   index: number;
-  open: SharedValue<number>;
+  open: boolean;
   children: ReactNode;
 }) {
-  const style = useAnimatedStyle(() => {
-    const start = index * STAGGER;
-    const t = interpolate(open.value, [start, start + SPAN], [0, 1], Extrapolation.CLAMP);
-    return {
-      opacity: Math.min(1, t * 2),
-      transform: [{ translateX: (1 - t) * -10 }, { scale: 0.5 + 0.5 * easeOutBack(t) }],
-    };
-  });
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = open
+      ? withDelay(index * STAGGER_MS, withSpring(1, SPRING))
+      : withTiming(0, { duration: 120 });
+  }, [open, index, progress]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.5], [0, 1], "clamp"),
+    transform: [{ translateY: (1 - progress.value) * 12 }, { scale: 0.6 + 0.4 * progress.value }],
+  }));
+
   return <Animated.View style={style}>{children}</Animated.View>;
 }

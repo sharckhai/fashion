@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, ArrowUp, Heart, MessageCircle, Sparkles, Star, X } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,7 +13,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Easing, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { GeneratingOverlay } from "@/components/generating-overlay";
@@ -39,15 +38,6 @@ export default function Chat() {
   const [composing, setComposing] = useState<"style" | "review" | null>(null);
   const [ratingOpen, setRatingOpen] = useState(false);
   const [text, setText] = useState("");
-  // ein gemeinsamer Fortschritt für alle Bewertungs-Bubbles (UI-Thread)
-  const ratingProgress = useSharedValue(0);
-
-  useEffect(() => {
-    ratingProgress.value = withTiming(ratingOpen ? 1 : 0, {
-      duration: ratingOpen ? 320 : 140,
-      easing: Easing.linear,
-    });
-  }, [ratingOpen, ratingProgress]);
 
   if (!data) {
     return (
@@ -233,18 +223,18 @@ export default function Chat() {
               accessibilityElementsHidden={!ratingOpen}
             >
               {/* Bubbles poppen nacheinander von links nach rechts auf */}
-              <PopBubble index={0} open={ratingProgress}>
-                <View className="h-11 justify-center rounded-full bg-butter px-4 shadow-lg">
+              <PopBubble index={0} open={ratingOpen}>
+                <View className="h-11 justify-center rounded-full bg-butter px-4">
                   <Text className="font-bold text-ink">Vote</Text>
                 </View>
               </PopBubble>
               {RATINGS.map((r) => (
-                <PopBubble key={r} index={r} open={ratingProgress}>
+                <PopBubble key={r} index={r} open={ratingOpen}>
                   <Pressable
                     onPress={() => rate(r)}
                     accessibilityLabel={`${r} von 5`}
                     className={cn(
-                      "h-11 w-11 items-center justify-center rounded-full shadow-lg active:scale-90",
+                      "h-11 w-11 items-center justify-center rounded-full border border-foreground/10 active:scale-90",
                       current.image.rating === r ? "bg-foreground" : "bg-card",
                     )}
                   >
