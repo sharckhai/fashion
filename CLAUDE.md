@@ -60,7 +60,7 @@ Expo-App (iOS zuerst, Android + Web nebenbei): Nutzer laden ein Foto von sich un
 - `chats`: eine Anprobier-Session
 - `images`: `kind` ist `person` | `garment` | `generated`, dazu `storage_path` und `is_favorite`
 - `generations`: ein Turn mit `input_image_ids[]`, `feedback`, `output_image_id` und `status`
-- Turn 1 bekommt als Input Person und Kleidung. Bei einem Feedback-Turn sind es das angezeigte Ergebnis, die Kleidung und der Feedback-Text.
+- Turn 1 bekommt als Input Person und Kleidung. Ein Feedback-Turn bekommt **nur** das im Chat ausgewählte Ergebnisbild plus den Feedback-Text, ohne Original-Kleidung. So lässt sich jede Version einzeln weiterbearbeiten.
 
 ## Testen
 

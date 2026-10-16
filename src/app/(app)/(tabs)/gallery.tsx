@@ -8,6 +8,10 @@ import { TAB_BAR_HEIGHT } from "@/components/floating-tab-bar";
 import { cn, IconButton, Image, Text } from "@/components/ui";
 import { useGallery, useToggleFavorite } from "@/lib/queries";
 
+const MAX_LIST_WIDTH = 768; // max-w-screen-md
+const PADDING_X = 20; // px-5
+const GAP = 12; // gap-3
+
 const FILTERS = [
   { label: "Alle", favoritesOnly: false },
   { label: "Favoriten", favoritesOnly: true },
@@ -15,10 +19,14 @@ const FILTERS = [
 
 export default function Gallery() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const { data: images = [], isLoading } = useGallery(favoritesOnly);
+  const { data: allImages = [], isLoading } = useGallery();
+  const images = favoritesOnly ? allImages.filter((img) => img.isFavorite) : allImages;
   const toggleFavorite = useToggleFavorite();
   const { width } = useWindowDimensions();
   const columns = width >= 700 ? 3 : 2;
+  // feste Kachelbreite, damit eine einzelne Kachel in der letzten Reihe nicht breiter wird
+  const listWidth = Math.min(width, MAX_LIST_WIDTH);
+  const tileWidth = (listWidth - PADDING_X * 2 - GAP * (columns - 1)) / columns;
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-background">
@@ -73,8 +81,8 @@ export default function Gallery() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push(`/chat/${item.chatId}`)}
-            className="flex-1 active:opacity-90"
-            style={{ maxWidth: `${100 / columns}%` }}
+            className="active:opacity-90"
+            style={{ width: tileWidth }}
           >
             <Image
               source={{ uri: item.url, cacheKey: item.id }}

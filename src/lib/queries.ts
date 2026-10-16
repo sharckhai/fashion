@@ -26,17 +26,18 @@ async function invokeTryOn(chatId: string, inputImageIds: string[], feedback?: s
   if (error) throw error;
 }
 
-export function useGallery(favoritesOnly = false) {
+// Eine Query für alle Looks; der Favoriten-Filter passiert im Screen,
+// damit ein gesetztes Herz sofort in beiden Tabs sichtbar ist
+export function useGallery() {
   return useQuery({
-    queryKey: ["gallery", favoritesOnly],
+    queryKey: ["gallery"],
     queryFn: async (): Promise<GalleryImage[]> => {
-      let query = supabase
+      const { data } = await supabase
         .from("images")
         .select("id, chat_id, storage_path, is_favorite")
         .eq("kind", "generated")
-        .order("created_at", { ascending: false });
-      if (favoritesOnly) query = query.eq("is_favorite", true);
-      const { data } = await query.throwOnError();
+        .order("created_at", { ascending: false })
+        .throwOnError();
       const urls = await signedUrls(
         "generations",
         data.map((img) => img.storage_path),
@@ -55,21 +56,13 @@ export function useChat(chatId: string) {
   return useQuery({
     queryKey: ["chat", chatId],
     queryFn: async () => {
-      const [{ data: generations }, { data: garments }] = await Promise.all([
-        supabase
-          .from("generations")
-          .select("id, feedback, output:images(id, storage_path, is_favorite)")
-          .eq("chat_id", chatId)
-          .eq("status", "done")
-          .order("created_at")
-          .throwOnError(),
-        supabase
-          .from("images")
-          .select("id")
-          .eq("chat_id", chatId)
-          .eq("kind", "garment")
-          .throwOnError(),
-      ]);
+      const { data: generations } = await supabase
+        .from("generations")
+        .select("id, feedback, output:images(id, storage_path, is_favorite)")
+        .eq("chat_id", chatId)
+        .eq("status", "done")
+        .order("created_at")
+        .throwOnError();
       const outputs = generations.map((g) => g.output!);
       const urls = await signedUrls(
         "generations",
@@ -80,7 +73,7 @@ export function useChat(chatId: string) {
         feedback: g.feedback,
         image: { id: outputs[i].id, url: urls[i], isFavorite: outputs[i].is_favorite },
       }));
-      return { turns, garmentIds: garments.map((g) => g.id) };
+      return { turns };
     },
   });
 }
@@ -123,8 +116,8 @@ export function useSendFeedback(chatId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ baseImageId, feedback }: { baseImageId: string; feedback: string }) => {
-      const { garmentIds } = queryClient.getQueryData<{ garmentIds: string[] }>(["chat", chatId])!;
-      await invokeTryOn(chatId, [baseImageId, ...garmentIds], feedback);
+      // nur das ausgewählte Bild bearbeiten, ohne Original-Kleidung
+      await invokeTryOn(chatId, [baseImageId], feedback);
     },
     onSuccess: () =>
       Promise.all([

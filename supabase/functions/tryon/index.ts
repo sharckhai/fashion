@@ -11,8 +11,8 @@ Fit each garment naturally to the person's body shape with realistic folds and l
 Do not add or remove any other clothing or accessories.`;
 
 const feedbackPrompt = (feedback: string) =>
-  `Image 1 is a photo of a person wearing an outfit. The following images are the original clothing items for reference.
-Edit image 1 according to this feedback: "${feedback}".
+  `This is a photo of a person wearing an outfit.
+Edit this image according to this feedback: "${feedback}".
 Change only what the feedback asks for. Keep the person's face, identity, body shape, pose, background and everything else exactly the same.`;
 
 type Body = { chatId: string; inputImageIds: string[]; feedback?: string };
