@@ -4,6 +4,8 @@ const token = (name) => `hsl(var(--${name}) / <alpha-value>)`;
 module.exports = {
   content: ["./src/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset")],
+  // "media" crasht NativeWind 4 im Web; Dark Mode läuft über die Media-Query in global.css
+  darkMode: "class",
   theme: {
     extend: {
       colors: {

@@ -1,4 +1,3 @@
-import { File } from "expo-file-system";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 
@@ -21,8 +20,8 @@ export async function uploadImage(uri: string, path: string) {
     maxWidth: 1536,
     maxHeight: 1536,
   }).renderAsync();
-  const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
-  const bytes = await new File(saved.uri).arrayBuffer();
+  const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.85, base64: true });
+  const bytes = Uint8Array.from(atob(saved.base64!), (c) => c.charCodeAt(0));
   const { error } = await supabase.storage
     .from("uploads")
     .upload(path, bytes, { contentType: "image/jpeg" });

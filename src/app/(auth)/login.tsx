@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PillButton, Text } from "@/components/ui";
+import { signInWithGoogle } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 const inputClass =
@@ -33,6 +34,11 @@ export default function Login() {
         : await supabase.auth.signUp(credentials);
     setLoading(false);
     if (error) setError(error.message);
+  }
+
+  async function google() {
+    setError(null);
+    await signInWithGoogle().catch((e: Error) => setError(e.message));
   }
 
   return (
@@ -58,6 +64,18 @@ export default function Login() {
           </View>
 
           <View className="mx-auto w-full max-w-screen-sm gap-3">
+            <Pressable
+              onPress={google}
+              className="h-14 flex-row items-center justify-center gap-3 rounded-full bg-card active:opacity-70"
+            >
+              <Text className="font-display text-xl">G</Text>
+              <Text className="font-bold">Mit Google fortfahren</Text>
+            </Pressable>
+            <View className="flex-row items-center gap-3 py-2">
+              <View className="h-px flex-1 bg-muted" />
+              <Text className="text-sm text-muted-foreground">oder mit E-Mail</Text>
+              <View className="h-px flex-1 bg-muted" />
+            </View>
             <TextInput
               className={inputClass}
               placeholder="E-Mail"

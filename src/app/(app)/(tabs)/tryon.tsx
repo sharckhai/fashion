@@ -60,7 +60,7 @@ export default function TryOn() {
             <Text className="font-bold text-xl">1 · Du</Text>
             <Pressable
               onPress={async () => setPerson((await chooseImage()) ?? person)}
-              className="aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-[32px] bg-blush active:opacity-90"
+              className="aspect-square w-full items-center justify-center overflow-hidden rounded-[32px] bg-blush active:opacity-90"
             >
               {person ? (
                 <Image source={{ uri: person }} className="h-full w-full" contentFit="cover" />
@@ -117,17 +117,14 @@ export default function TryOn() {
         </View>
       </ScrollView>
 
-      <View
-        className="absolute inset-x-5 mx-auto max-w-screen-sm"
-        style={{ bottom: TAB_BAR_HEIGHT + 48 }}
-      >
-        <PillButton
-          label="Outfit generieren"
-          icon={Sparkles}
-          disabled={!person || garments.length === 0}
-          onPress={generate}
-        />
-      </View>
+      {person && garments.length > 0 && (
+        <View
+          className="absolute inset-x-5 mx-auto max-w-screen-sm"
+          style={{ bottom: TAB_BAR_HEIGHT + 48 }}
+        >
+          <PillButton label="Outfit generieren" icon={Sparkles} onPress={generate} />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
