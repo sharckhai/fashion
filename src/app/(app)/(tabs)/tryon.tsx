@@ -34,13 +34,20 @@ export default function TryOn() {
     if (uri) setGarments((g) => [...g, uri]);
   }
 
-  async function generate() {
-    const chatId = await tryOn.mutateAsync({ person: person!, garments });
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setPerson(null);
-    setGarments([]);
-    tryOn.reset();
-    router.push(`/chat/${chatId}`);
+  // mutate statt mutateAsync: Fehler landen in tryOn.error und werden im Screen angezeigt
+  function generate() {
+    tryOn.mutate(
+      { person: person!, garments },
+      {
+        onSuccess: (chatId) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setPerson(null);
+          setGarments([]);
+          tryOn.reset();
+          router.push(`/chat/${chatId}`);
+        },
+      },
+    );
   }
 
   if (tryOn.isPending) {

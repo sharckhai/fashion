@@ -38,13 +38,19 @@ export default function Chat() {
   const turns = data.turns;
   const current = turns.find((t) => t.id === selectedId) ?? turns[turns.length - 1];
 
-  async function send() {
+  function send() {
     const text = feedback.trim();
     setFeedback("");
     setComposing(false);
-    await sendFeedback.mutateAsync({ baseImageId: current.image.id, feedback: text });
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSelectedId(null);
+    sendFeedback.mutate(
+      { baseImageId: current.image.id, feedback: text },
+      {
+        onSuccess: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setSelectedId(null);
+        },
+      },
+    );
   }
 
   return (
