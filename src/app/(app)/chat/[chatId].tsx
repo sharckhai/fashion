@@ -22,13 +22,9 @@ import { useChangeStyle, useChat, useReviewImage, useToggleFavorite } from "@/li
 
 const RATINGS = [1, 2, 3, 4, 5];
 
-const COMPOSER = {
-  style: {
-    label: "Change Style",
-    color: "bg-butter",
-    placeholder: "z. B. Farbe in kariertes Orange-Rot ändern",
-  },
-  review: { label: "Feedback", color: "bg-lavender", placeholder: "Was gefällt dir, was nicht?" },
+const PLACEHOLDERS = {
+  style: "z. B. Farbe in kariertes Orange-Rot ändern",
+  review: "Feedback\nWas gefällt dir, was nicht?",
 };
 
 export default function Chat() {
@@ -244,31 +240,26 @@ export default function Chat() {
             ))}
           </View>
 
-          {/* Feedback / Change Style: Label- und Text-Bubble poppen über der Leiste auf */}
+          {/* Feedback / Change Style: Text-Bubble + Senden poppen über der Leiste auf */}
           <View
-            className="absolute inset-x-5 bottom-full mb-2 items-end gap-1.5"
+            className="absolute inset-x-5 bottom-full mb-2"
             pointerEvents={composerOpen ? "box-none" : "none"}
             accessibilityElementsHidden={!composerOpen}
           >
-            <PopBubble index={0} open={composerOpen}>
-              <View className={cn("h-9 justify-center rounded-full px-4", COMPOSER[mode].color)}>
-                <Text className="font-bold text-ink text-sm">{COMPOSER[mode].label}</Text>
-              </View>
-            </PopBubble>
             <View className="w-full flex-row items-end gap-1.5">
               <View className="flex-1">
-                <PopBubble index={1} open={composerOpen}>
+                <PopBubble index={0} open={composerOpen}>
                   <TextInput
                     ref={inputRef}
                     multiline
                     value={text}
                     onChangeText={setText}
-                    placeholder={COMPOSER[mode].placeholder}
+                    placeholder={PLACEHOLDERS[mode]}
                     className="max-h-32 min-h-11 rounded-3xl border border-foreground/10 bg-card px-5 py-3 outline-none font-sans text-base text-foreground placeholder:text-muted-foreground"
                   />
                 </PopBubble>
               </View>
-              <PopBubble index={2} open={composerOpen}>
+              <PopBubble index={1} open={composerOpen}>
                 <IconButton
                   icon={ArrowUp}
                   accessibilityLabel="Senden"
