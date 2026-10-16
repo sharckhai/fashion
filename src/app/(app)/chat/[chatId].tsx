@@ -29,12 +29,13 @@ const PLACEHOLDERS = {
 };
 
 export default function Chat() {
-  const { chatId } = useLocalSearchParams<{ chatId: string }>();
+  const { chatId, imageId } = useLocalSearchParams<{ chatId: string; imageId?: string }>();
   const { data } = useChat(chatId);
   const changeStyle = useChangeStyle(chatId);
   const reviewImage = useReviewImage();
   const toggleFavorite = useToggleFavorite();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // ausgewählte Version per Bild-ID; Start mit dem Bild, das auf Home/Galerie angetippt wurde
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(imageId ?? null);
   const [composing, setComposing] = useState<"style" | "review" | null>(null);
   const [ratingOpen, setRatingOpen] = useState(false);
   const [text, setText] = useState("");
@@ -57,7 +58,7 @@ export default function Chat() {
   }
 
   const turns = data.turns;
-  const current = turns.find((t) => t.id === selectedId) ?? turns[turns.length - 1];
+  const current = turns.find((t) => t.image.id === selectedImageId) ?? turns[turns.length - 1];
 
   // Tipp neben ein offenes Overlay (Bewertung, Eingabe) schließt es
   function closeOverlays() {
@@ -92,7 +93,7 @@ export default function Chat() {
       {
         onSuccess: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setSelectedId(null);
+          setSelectedImageId(null);
         },
       },
     );
@@ -164,7 +165,7 @@ export default function Chat() {
               renderItem={({ item, index }) => (
                 <Pressable
                   onPress={() => {
-                    setSelectedId(item.id);
+                    setSelectedImageId(item.image.id);
                     setRatingOpen(false);
                   }}
                   accessibilityLabel={`Version ${index + 1}`}

@@ -78,7 +78,14 @@ export default function Home() {
               showsHorizontalScrollIndicator={false}
               contentContainerClassName="gap-3 px-5"
               renderItem={({ item }) => (
-                <Pressable onPress={() => router.push(`/chat/${item.chatId}`)}>
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: "/chat/[chatId]",
+                      params: { chatId: item.chatId, imageId: item.id },
+                    })
+                  }
+                >
                   <Image
                     source={{ uri: item.url, cacheKey: item.id }}
                     className="h-48 w-36 rounded-3xl bg-muted"

@@ -80,7 +80,12 @@ export default function Gallery() {
         }
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => router.push(`/chat/${item.chatId}`)}
+            onPress={() =>
+              router.push({
+                pathname: "/chat/[chatId]",
+                params: { chatId: item.chatId, imageId: item.id },
+              })
+            }
             className="active:opacity-90"
             style={{ width: tileWidth }}
           >
