@@ -10,6 +10,8 @@
   --muted-foreground: 30 6% 40%;
   /* ink: Text auf Pastellflächen, in beiden Modi dunkel */
   --ink: 0 0% 8%;
+  /* Text auf ink-Flächen, in beiden Modi hell */
+  --ink-foreground: 39 70% 95%;
   --butter: 45 88% 72%;
   --blush: 331 74% 85%;
   --sage: 76 30% 62%;
@@ -26,6 +28,7 @@
     --muted: 30 6% 18%;
     --muted-foreground: 35 10% 65%;
     --ink: 0 0% 8%;
+    --ink-foreground: 39 70% 95%;
     --butter: 45 70% 64%;
     --blush: 331 55% 74%;
     --sage: 76 25% 55%;

@@ -21,7 +21,7 @@ Expo-App (iOS zuerst, Android + Web nebenbei): Nutzer laden ein Foto von sich un
 - **XP / Fail-Fast:** einfachster Code, der funktioniert. Kein defensives Error-Handling. Supabase-Queries mit `.throwOnError()`.
 - **Native Pakete immer mit `npx expo install <pkg>`** installieren.
 - Keine Long-Running-Commands (`npx expo start`) durch Claude. Die startet der User.
-- **Keine hartkodierten Farben.** Nur Tokens: `background`, `foreground`, `card`, `muted`, `muted-foreground`, `ink` (Text auf Pastell, immer dunkel), `butter`, `blush`, `sage`, `lavender`, `peach`, `destructive`. Neue Farben werden in `global.css` (light + dark) **und** in `tailwind.config.js` angelegt.
+- **Keine hartkodierten Farben.** Nur Tokens: `background`, `foreground`, `card`, `muted`, `muted-foreground`, `ink` (Text auf Pastell, immer dunkel), `ink-foreground` (Text auf ink, immer hell), `butter`, `blush`, `sage`, `lavender`, `peach`, `destructive`. Neue Farben werden in `global.css` (light + dark) **und** in `tailwind.config.js` angelegt.
 - Klassen über `cn()` aus `src/components/ui.tsx` zusammenführen (tailwind-merge).
 - UUIDs im App-Code über `expo-crypto` (`randomUUID`). `crypto.randomUUID` gibt es in Hermes nicht.
 - Vor dem Commit: `npm run typecheck && npm run lint`

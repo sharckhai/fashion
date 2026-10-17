@@ -15,6 +15,7 @@ module.exports = {
         muted: token("muted"),
         "muted-foreground": token("muted-foreground"),
         ink: token("ink"),
+        "ink-foreground": token("ink-foreground"),
         butter: token("butter"),
         blush: token("blush"),
         sage: token("sage"),

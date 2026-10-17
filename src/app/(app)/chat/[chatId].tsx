@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, ArrowUp, Heart, MessageCircle, Sparkles, Star } from "lucide-react-native";
-import { type ComponentRef, useEffect, useRef, useState } from "react";
+import { type ComponentRef, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,10 +10,12 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GeneratingOverlay } from "@/components/generating-overlay";
 import { PopBubble } from "@/components/pop-bubble";
@@ -21,6 +23,8 @@ import { cn, Icon, IconButton, Image, PillButton, Text } from "@/components/ui";
 import { useChangeStyle, useChat, useReviewImage, useToggleFavorite } from "@/lib/queries";
 
 const RATINGS = [1, 2, 3, 4, 5];
+// Abstand oben + Button-Höhe + Abstand zum Bild
+const HEADER_HEIGHT = 12 + 44 + 12;
 
 const PLACEHOLDERS = {
   style: "z. B. Farbe in kariertes Orange-Rot ändern",
@@ -41,6 +45,8 @@ export default function Chat() {
   const [ratingOpen, setRatingOpen] = useState(false);
   const [text, setText] = useState("");
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const insets = useSafeAreaInsets();
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     if (composerOpen) inputRef.current?.focus();
@@ -75,6 +81,7 @@ export default function Chat() {
 
   // aktives Overlay; die übrigen Buttons der Leiste werden abgedunkelt
   const active = ratingOpen ? "rating" : composerOpen ? mode : null;
+  const onPill = scrolled ? "text-ink-foreground" : "text-foreground";
   const dimmed = (key: "rating" | "style" | "review") => active !== null && active !== key;
 
   function rate(rating: number) {
@@ -104,33 +111,17 @@ export default function Chat() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
+    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-background">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View className="mx-auto w-full max-w-screen-sm flex-row items-center justify-between px-5 pb-3 pt-3">
-          <IconButton
-            icon={ArrowLeft}
-            accessibilityLabel="Zurück"
-            onPress={() => router.dismissTo("/")}
-          />
-          <Text className="font-bold text-lg">Dein Look</Text>
-          <IconButton
-            icon={Heart}
-            accessibilityLabel="Favorit"
-            filled={current.image.isFavorite}
-            iconClassName={current.image.isFavorite ? "text-destructive" : undefined}
-            onPress={() =>
-              toggleFavorite.mutate({
-                imageId: current.image.id,
-                isFavorite: !current.image.isFavorite,
-              })
-            }
-          />
-        </View>
-
-        <ScrollView contentContainerClassName="mx-auto w-full max-w-screen-sm gap-4 px-5 pb-6">
+        <ScrollView
+          scrollEventThrottle={16}
+          onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 8)}
+          contentContainerClassName="mx-auto w-full max-w-screen-sm gap-4 px-5 pb-6"
+          contentContainerStyle={{ paddingTop: insets.top + HEADER_HEIGHT }}
+        >
           <View className="aspect-[2/3] w-full overflow-hidden rounded-[32px] bg-muted">
             <Image
               source={{ uri: current.image.url, cacheKey: current.image.id }}
@@ -190,6 +181,53 @@ export default function Chat() {
             />
           )}
         </ScrollView>
+
+        {/* Header ohne Balken: Pills werden erst beim Scrollen schwarz hinterlegt */}
+        <View
+          className="absolute inset-x-0 top-0"
+          style={{ paddingTop: insets.top + 12 }}
+          pointerEvents="box-none"
+        >
+          <View
+            className="mx-auto w-full max-w-screen-sm flex-row items-center justify-between px-5"
+            pointerEvents="box-none"
+          >
+            <Pressable
+              accessibilityLabel="Zurück"
+              hitSlop={8}
+              className="active:opacity-70"
+              onPress={() => router.dismissTo("/")}
+            >
+              <FloatingPill visible={scrolled} className="w-11 items-center">
+                <Icon as={ArrowLeft} size={20} className={onPill} />
+              </FloatingPill>
+            </Pressable>
+            <FloatingPill visible={scrolled} className="px-5">
+              <Text className={cn("font-bold text-lg", onPill)}>Dein Look</Text>
+            </FloatingPill>
+            <Pressable
+              accessibilityLabel="Favorit"
+              hitSlop={8}
+              className="active:opacity-70"
+              onPress={() => {
+                Haptics.selectionAsync();
+                toggleFavorite.mutate({
+                  imageId: current.image.id,
+                  isFavorite: !current.image.isFavorite,
+                });
+              }}
+            >
+              <FloatingPill visible={scrolled} className="w-11 items-center">
+                <Icon
+                  as={Heart}
+                  size={20}
+                  fill={current.image.isFavorite ? "currentColor" : "none"}
+                  className={current.image.isFavorite ? "text-destructive" : onPill}
+                />
+              </FloatingPill>
+            </Pressable>
+          </View>
+        </View>
 
         {active && (
           <Pressable
@@ -320,5 +358,32 @@ export default function Chat() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+/** Header-Element mit schwarzer Pill, die weich einblendet */
+function FloatingPill({
+  visible,
+  className,
+  children,
+}: {
+  visible: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const opacity = useSharedValue(0);
+  useEffect(() => {
+    opacity.value = withTiming(visible ? 1 : 0, { duration: 180 });
+  }, [visible, opacity]);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  return (
+    <View className={cn("h-11 justify-center", className)}>
+      <Animated.View style={[StyleSheet.absoluteFill, style]}>
+        <View className="flex-1 rounded-full bg-ink" />
+      </Animated.View>
+      {/* eigene View, sonst malt das Web das absolute Pill-Layer über das SVG-Icon */}
+      <View>{children}</View>
+    </View>
   );
 }
