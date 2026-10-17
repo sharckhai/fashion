@@ -109,7 +109,7 @@ export default function Chat() {
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View className="mx-auto w-full max-w-screen-sm flex-row items-center justify-between px-5 pb-3">
+        <View className="mx-auto w-full max-w-screen-sm flex-row items-center justify-between px-5 pb-3 pt-3">
           <IconButton
             icon={ArrowLeft}
             accessibilityLabel="Zurück"
